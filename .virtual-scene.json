@@ -1,0 +1,76 @@
+{
+  "studioVersion": "5.22.0",
+  "targetPlatform": "Spectacles",
+  "rootObjects": [
+    {
+      "id": "00000000-0000-0065-0000-000000000064",
+      "name": "Camera Object",
+      "components": [
+        "Camera",
+        "DeviceTracking (World)"
+      ]
+    },
+    {
+      "id": "0005641c-028d-459a-0000-000000014b4d",
+      "name": "Lighting",
+      "components": [
+        "LightSource"
+      ]
+    },
+    {
+      "id": "f5d74682-203a-4970-81ea-9fa7b88c96bb",
+      "name": "SpectaclesInteractionKit",
+      "prefab": "SpectaclesInteractionKit.lspkg/Prefabs/SpectaclesInteractionKit.prefab"
+    },
+    {
+      "id": "a11ce001-2026-4a00-b001-000000000001",
+      "name": "BenchPulseMain",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "script": "Assets/Scripts/BenchPulseMain.ts"
+    },
+    {
+      "id": "a11ce001-2026-4a00-b001-000000000002",
+      "name": "BenchPulseCoachUI",
+      "position": [
+        -14.0,
+        -8.0,
+        -90.0
+      ],
+      "script": "Assets/Scripts/BenchPulseCoachUI.ts"
+    },
+    {
+      "id": "a11ce001-2026-4a00-b001-000000000003",
+      "name": "BenchPulseDiagnosticsUI",
+      "position": [
+        15.0,
+        -12.0,
+        -85.0
+      ],
+      "script": "Assets/Scripts/BenchPulseDiagnosticsUI.ts"
+    },
+    {
+      "id": "a11ce001-2026-4a00-b001-000000000004",
+      "name": "BenchPulsePcbMesh",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "script": "Assets/Scripts/BenchPulsePcbMesh.ts"
+    },
+    {
+      "id": "a11ce001-2026-4a00-b001-000000000005",
+      "name": "LeafIndex",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "script": "Assets/Tests/LeafIndex.ts"
+    }
+  ]
+}

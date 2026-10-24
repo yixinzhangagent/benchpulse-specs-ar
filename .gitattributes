@@ -1,0 +1,3 @@
+*.esproj text linguist-language=yaml
+*.ts text linguist-language=typescript
+*.md text

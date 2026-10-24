@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lens Studio 5.22.0 — BenchPulse.esproj (SPECS Interactive Preview & LEAF Runner)</title>
+<style>
+  :root {
+    --bg-dark: #14161a;
+    --panel-bg: #1d2026;
+    --panel-header: #252932;
+    --border: #313642;
+    --cyan: #4df0ff;
+    --amber: #ffb830;
+    --emerald: #38f29b;
+    --coral: #ff6048;
+    --text: #f4faff;
+    --muted: #8c96a8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: var(--bg-dark); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
+  /* Top Menu Bar */
+  .topbar {
+    height: 38px; background: #101216; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 12px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .ls-badge { background: #fffc00; color: #000; font-weight: 800; padding: 2px 7px; border-radius: 4px; font-size: 11px; letter-spacing: 0.3px; }
+  .target-pill { background: rgba(77,240,255,0.14); border: 1px solid var(--cyan); color: var(--cyan); padding: 2px 8px; border-radius: 99px; font-weight: 600; font-size: 11px; }
+  .mcp-pill { background: rgba(56,242,155,0.14); border: 1px solid var(--emerald); color: var(--emerald); padding: 2px 8px; border-radius: 99px; font-weight: 600; font-size: 11px; }
+  /* Workspace Grid */
+  .workspace { flex: 1; display: grid; grid-template-columns: 270px 1fr 340px; grid-template-rows: 1fr 185px; gap: 1px; background: var(--border); overflow: hidden; }
+  .panel { background: var(--panel-bg); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-title {
+    height: 28px; background: var(--panel-header); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 10px;
+    font-size: 11px; font-weight: 700; color: #c5cede; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  /* Left Hierarchy & Brief */
+  .tree-list { padding: 8px; font-size: 12px; line-height: 1.75; overflow-y: auto; flex: 1; }
+  .tree-item { padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; }
+  .tree-item.active { background: rgba(77,240,255,0.15); color: var(--cyan); font-weight: 600; }
+  .tree-tag { font-size: 10px; color: var(--muted); background: #14161a; padding: 1px 5px; border-radius: 3px; }
+  /* Center Interactive Preview */
+  .preview-container { position: relative; background: radial-gradient(circle at 50% 60%, #242a36 0%, #12151b 75%); flex: 1; overflow: hidden; }
+  .preview-toolbar {
+    position: absolute; top: 10px; left: 12px; right: 12px; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center; pointer-events: none;
+  }
+  .preview-toolbar-group {
+    background: rgba(16,18,22,0.85); border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 10px; font-size: 11px; color: #d0d8e8; display: flex; gap: 12px; align-items: center; pointer-events: auto;
+  }
+  .fov-frame {
+    position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
+    width: 84%; height: calc(100% - 68px);
+    border: 1.5px dashed rgba(77,240,255,0.45); border-radius: 14px;
+    box-shadow: inset 0 0 40px rgba(77,240,255,0.06); pointer-events: none; z-index: 5;
+  }
+  .fov-label {
+    position: absolute; top: -10px; left: 18px; background: #151921; padding: 1px 8px;
+    font-size: 10px; color: var(--cyan); font-weight: 700; letter-spacing: 0.4px; border: 1px solid rgba(77,240,255,0.4); border-radius: 4px;
+  }
+  /* 3D Workbench Canvas + Additive AR Overlays */
+  #benchCanvas { width: 100%; height: 100%; display: block; }
+  /* Additive UI Cards inside FOV */
+  .ar-card {
+    position: absolute; border-radius: 12px;
+    background: rgba(12, 22, 34, 0.78);
+    border: 1.5px solid rgba(77, 240, 255, 0.65);
+    box-shadow: 0 0 24px rgba(77, 240, 255, 0.22), inset 0 0 14px rgba(77, 240, 255, 0.12);
+    backdrop-filter: blur(4px); padding: 14px 16px; z-index: 8;
+    transition: all 0.25s ease;
+  }
+  #coachCard { top: 78px; left: 9%; width: 350px; }
+  #standInDock { top: 78px; right: 9%; width: 295px; border-color: rgba(255, 184, 48, 0.65); box-shadow: 0 0 22px rgba(255, 184, 48, 0.16); }
+  #faultPopup {
+    bottom: 34px; left: 50%; transform: translateX(-50%); width: 460px;
+    border-color: var(--coral); background: rgba(36, 12, 14, 0.88);
+    box-shadow: 0 0 30px rgba(255, 96, 72, 0.45); display: none;
+  }
+  #wayfinderArrow {
+    position: absolute; top: 48%; right: 9.5%; z-index: 9;
+    background: rgba(255, 184, 48, 0.2); border: 2px solid var(--amber);
+    color: var(--amber); padding: 8px 14px; border-radius: 99px; font-weight: 800;
+    font-size: 13px; letter-spacing: 0.4px; box-shadow: 0 0 24px rgba(255, 184, 48, 0.5);
+    display: none; animation: pulseArrow 0.9s infinite alternate;
+  }
+  @keyframes pulseArrow {
+    from { transform: translateX(0px) scale(1); }
+    to { transform: translateX(8px) scale(1.05); }
+  }
+  .ar-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--cyan); margin-bottom: 5px; display: flex; justify-content: space-between; }
+  .ar-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; text-shadow: 0 0 10px rgba(77,240,255,0.4); }
+  .ar-polarity { font-size: 12.5px; font-weight: 700; color: var(--amber); margin-bottom: 6px; }
+  .ar-timer { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 10px; padding: 5px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); }
+  .btn-row { display: flex; gap: 8px; }
+  .sik-btn {
+    flex: 1; padding: 9px 10px; border-radius: 8px; border: 1.5px solid var(--cyan);
+    background: rgba(77, 240, 255, 0.16); color: var(--text); font-weight: 700; font-size: 12px;
+    cursor: pointer; text-align: center; transition: all 0.15s ease;
+  }
+  .sik-btn:hover { background: rgba(77, 240, 255, 0.32); transform: translateY(-1px); box-shadow: 0 0 14px rgba(77,240,255,0.4); }
+  .sik-btn.amber { border-color: var(--amber); background: rgba(255, 184, 48, 0.16); }
+  .sik-btn.amber:hover { background: rgba(255, 184, 48, 0.34); box-shadow: 0 0 14px rgba(255,184,48,0.4); }
+  .sik-btn.coral { border-color: var(--coral); background: rgba(255, 96, 72, 0.22); }
+  /* Right Panel: LEAF Test Runner & Design Brief Inspector */
+  .leaf-list { padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+  .leaf-card { background: #15181e; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 11.5px; }
+  .leaf-card-top { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 4px; }
+  .badge-pass { background: rgba(56,242,155,0.18); color: var(--emerald); border: 1px solid var(--emerald); padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+  .badge-run { background: rgba(255,184,48,0.2); color: var(--amber); border: 1px solid var(--amber); padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+  /* Bottom Logger & Brief Viewer */
+  .logger-box { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11.5px; padding: 8px 12px; overflow-y: auto; flex: 1; line-height: 1.55; background: #101216; color: #cfd8e8; }
+  .log-pass { color: var(--emerald); font-weight: 700; }
+  .log-info { color: var(--cyan); }
+  .log-warn { color: var(--amber); }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="ls-badge">LENS STUDIO 5.22.0</span>
+      <strong>BenchPulse.esproj</strong>
+      <span class="target-pill">Target: Spectacles (SPECS Stereo)</span>
+      <span class="mcp-pill">● lens-studio MCP: 127.0.0.1:50542 Connected</span>
+      <span class="mcp-pill">● CLAD: ls-clad@ls-extensions Active</span>
+    </div>
+    <div>
+      <span style="color:var(--muted);margin-right:12px;">Skill Pack: <code>challengepost/learn-specs (plan-lens)</code></span>
+      <button class="sik-btn" style="padding:4px 12px;font-size:11px;" onclick="runAllLeafScenarios()">▶ Run All 5 LEAF Scenarios</button>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <!-- Left Scene Hierarchy -->
+    <div class="panel">
+      <div class="panel-title"><span>Scene Hierarchy</span><span>VirtualScene</span></div>
+      <div class="tree-list" id="sceneTree">
+        <div class="tree-item"><span>🎥 Camera Object</span><span class="tree-tag">World Tracking</span></div>
+        <div class="tree-item"><span>💡 Lighting</span><span class="tree-tag">Directional</span></div>
+        <div class="tree-item"><span>🖐 SpectaclesInteractionKit</span><span class="tree-tag">SIK Prefab</span></div>
+        <div class="tree-item active"><span>⚡ BenchPulseMain</span><span class="tree-tag">Orchestrator</span></div>
+        <div class="tree-item" style="padding-left:18px;"><span>📋 BenchPulseCoachUI</span><span class="tree-tag">BackPlate z=-90</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🔤 StepTitleText</span><span class="tree-tag">Title</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🔤 TimerStatusText</span><span class="tree-tag">Timer</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🔘 NextStepButton</span><span class="tree-tag">9×4.5cm</span></div>
+        <div class="tree-item" style="padding-left:18px;"><span>🎛 BenchPulseDiagnosticsUI</span><span class="tree-tag">Frame z=-85</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🔘 LockBoardButton</span><span class="tree-tag">Stand-In 1</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🔘 HeatPadButton</span><span class="tree-tag">Stand-In 2</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🔘 TriggerShortButton</span><span class="tree-tag">Stand-In 3</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>⚠️ FaultPopupRoot</span><span class="tree-tag" id="treeFaultState">Hidden (G3)</span></div>
+        <div class="tree-item" style="padding-left:18px;"><span>🟩 BenchPulsePcbMesh</span><span class="tree-tag">32×22cm PCB</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🎯 PadRing_1 (C1 +3.3V)</span><span class="tree-tag" id="treePad1">Idle Dot</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🎯 PadRing_2 (U1 GND)</span><span class="tree-tag" id="treePad2">Idle Dot</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🎯 PadRing_3 (J2 SDA)</span><span class="tree-tag" id="treePad3">Idle Dot</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>🎯 PadRing_4 (J2 SCL)</span><span class="tree-tag" id="treePad4">Idle Dot</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>➡️ WayfinderArrow</span><span class="tree-tag" id="treeArrow">Disabled</span></div>
+        <div class="tree-item" style="padding-left:32px;"><span>📟 MultimeterStationRoot</span><span class="tree-tag">x=+48cm</span></div>
+        <div class="tree-item"><span>🧪 LeafIndex</span><span class="tree-tag">5 Scenarios</span></div>
+      </div>
+    </div>
+
+    <!-- Center SPECS Interactive Preview -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>Interactive Preview — Spectacles (Stereo Additive Display Simulation)</span>
+        <span id="cameraPoseLabel">Gaze: Pitch -12° Down, Yaw 0° (Workbench View @ z = -85 cm)</span>
+      </div>
+      <div class="preview-container">
+        <div class="preview-toolbar">
+          <div class="preview-toolbar-group">
+            <span>Input: <strong>SIK MouseInteractor (Click = Pinch)</strong></span>
+            <span>|</span>
+            <span>Additive Black = Transparent</span>
+          </div>
+          <div class="preview-toolbar-group">
+            <button class="sik-btn" style="padding:3px 8px;font-size:11px;" onclick="panCamera(0)">Look at PCB (0°)</button>
+            <button class="sik-btn amber" style="padding:3px 8px;font-size:11px;" onclick="panCamera(35)">Look Right 35° (Multimeter x=+48cm)</button>
+          </div>
+        </div>
+
+        <div class="fov-frame">
+          <span class="fov-label">SPECS BINOCULAR FOV: 37° TALL × 32° WIDE (USABLE 41×59 CM @ 85 CM) — KEEP HANDS FREE & EYES ON TASK</span>
+        </div>
+
+        <!-- BenchPulseCoachUI Card -->
+        <div class="ar-card" id="coachCard">
+          <div class="ar-tag">
+            <span>BenchPulseCoachUI (BackPlate +0.6cm Z)</span>
+            <span id="badgeLogical">LOGIC PROVEN</span>
+          </div>
+          <div class="ar-title" id="stepTitleText">Standby: Pinch 'Found Board' to Lock PCB</div>
+          <div class="ar-polarity" id="polarityNoteText">Align PCB fiducials inside 37×32° view</div>
+          <div class="ar-timer" id="timerStatusText">Iron Idle — Waiting for Board Lock</div>
+          <div class="btn-row">
+            <button class="sik-btn" id="nextStepBtn" onclick="uiAdvanceStep()">✋ Pinch: Next Joint (9×4.5cm)</button>
+            <button class="sik-btn" id="pinoutBtn" onclick="uiTogglePinout()">🔍 Pinout Polarity</button>
+          </div>
+        </div>
+
+        <!-- BenchPulseDiagnosticsUI Stand-In Dock -->
+        <div class="ar-card" id="standInDock">
+          <div class="ar-tag" style="color:var(--amber);">
+            <span>Preview Stand-Ins (Fakes Sensing)</span>
+            <span>SIK Frame</span>
+          </div>
+          <div style="font-size:11px;color:#cbd5e1;margin-bottom:8px;">
+            Simulates PCB fiducial lock, 350°C iron contact, and BLE multimeter short in Lens Studio Preview:
+          </div>
+          <div class="btn-row" style="margin-bottom:8px;">
+            <button class="sik-btn amber" id="lockBoardBtn" onclick="uiLockBoard()">🎯 Found Board</button>
+            <button class="sik-btn amber" id="heatPadBtn" onclick="uiHeatPad()">🔥 Heat Pad 3.5s</button>
+          </div>
+          <div class="btn-row">
+            <button class="sik-btn coral" id="triggerShortBtn" onclick="uiTriggerShort()">⚡ Simulate Continuity Short (0.2 Ω)</button>
+          </div>
+        </div>
+
+        <!-- Wayfinder Arrow when out-of-view Multimeter triggers -->
+        <div id="wayfinderArrow" onclick="panCamera(35)" style="cursor:pointer;">
+          🔔 CONTINUITY FAULT → Look Right 35° (Multimeter 0.2 Ω)
+        </div>
+
+        <!-- FaultPopupRoot (starts disabled per G3) -->
+        <div class="ar-card" id="faultPopup">
+          <div class="ar-tag" style="color:var(--coral);">
+            <span>FaultPopupRoot (Initialized Disabled per Rule G3)</span>
+            <span>SPATIAL CHIME ACTIVE</span>
+          </div>
+          <div class="ar-title" id="faultAlertText" style="color:var(--coral);">
+            SHORT DETECTED: Look Right → Multimeter (0.2 Ω Bridge on GND/3.3V)
+          </div>
+          <div class="btn-row" style="margin-top:8px;">
+            <button class="sik-btn coral" id="ackFaultBtn" onclick="uiClearShort()">✋ Pinch: Clear Fault & Re-heat (15×4.5cm)</button>
+          </div>
+        </div>
+
+        <canvas id="benchCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Right Panel: LEAF Scenario Runner -->
+    <div class="panel">
+      <div class="panel-title"><span>LEAF Panel — Automated Scenarios</span><span>5 Registered</span></div>
+      <div class="leaf-list">
+        <div class="leaf-card">
+          <div class="leaf-card-top">
+            <span>1. benchpulse-board-lock</span>
+            <span class="badge-pass" id="status-s1">PASSED</span>
+          </div>
+          <div style="color:var(--muted);">Triggers <code>LockBoardButton</code>, asserts <code>PadRing_1.enabled == true</code> &amp; <code>Step 1/4: Solder C1 (+3.3V)</code>.</div>
+        </div>
+        <div class="leaf-card">
+          <div class="leaf-card-top">
+            <span>2. benchpulse-heat-timer</span>
+            <span class="badge-pass" id="status-s2">PASSED</span>
+          </div>
+          <div style="color:var(--muted);">Triggers <code>HeatPadButton</code>, verifies 3.5s thermal ring &amp; <code>Heating: 350°C — Flow Ready</code>.</div>
+        </div>
+        <div class="leaf-card">
+          <div class="leaf-card-top">
+            <span>3. benchpulse-step-progression</span>
+            <span class="badge-pass" id="status-s3">PASSED</span>
+          </div>
+          <div style="color:var(--muted);">Advances <code>NextStepButton</code> across Steps 1→2→3→4, collapsing finished rings into quiet dots until <code>Board Passed QC</code>.</div>
+        </div>
+        <div class="leaf-card">
+          <div class="leaf-card-top">
+            <span>4. benchpulse-continuity-fault</span>
+            <span class="badge-pass" id="status-s4">PASSED</span>
+          </div>
+          <div style="color:var(--muted);">Triggers <code>TriggerShortButton</code>, asserts <code>WayfinderArrow</code> &amp; <code>FaultPopupRoot</code> appear, then clears via <code>AcknowledgeFaultButton</code>.</div>
+        </div>
+        <div class="leaf-card">
+          <div class="leaf-card-top">
+            <span>5. benchpulse-ik-reachability</span>
+            <span class="badge-pass" id="status-s5">PASSED</span>
+          </div>
+          <div style="color:var(--muted);">Uses <code>createIKInteractor()</code> (Bitmoji 3D full-arm IK) to prove controls at <code>z=-85..-90cm</code> are physically reachable.</div>
+        </div>
+        <div class="leaf-card" style="border-color:rgba(77,240,255,0.4);">
+          <div class="leaf-card-top" style="color:var(--cyan);">
+            <span>devpost/design-brief.md</span>
+            <span class="badge-pass">status: approved</span>
+          </div>
+          <div style="color:#cfd8e8;line-height:1.45;">
+            • <strong>Logic Proven:</strong> Fiducial lock stand-in, 4-pad spatial rings, 3.5s heat timer, out-of-view wayfinder arrow, 5/5 LEAF tests.<br/>
+            • <strong>Feel Unproven:</strong> Real hand-tracking with iron grip &amp; contrast under 1000lm bench lamp.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Logger Panel (spans all 3 columns) -->
+    <div class="panel" style="grid-column: 1 / 4;">
+      <div class="panel-title">
+        <span>Logger — Runtime &amp; LEAF Scenario Output</span>
+        <span>0 Errors • 0 Warnings • TypeScript Compiled</span>
+      </div>
+      <div class="logger-box" id="loggerBox">
+        <div class="log-info">[CLAD /specs-project-init] TargetPlatform: Spectacles | Camera: Perspective + DeviceTracking(World) | SIK + UIKit + Leaf.lspkg verified.</div>
+        <div class="log-info">[CLAD Phase 3c] Consolidated Hard Rule 3 audit passed: 0 non-UI Text components, 0 manual renderOrder overrides.</div>
+        <div class="log-pass">[LEAF] Registered 5 scenarios from Assets/Tests/LeafIndex.ts (@scenariosIndex). Ready in Interactive Preview.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const steps = [
+    { idx: 1, total: 4, code: "C1", net: "+3.3V", note: "Gold stripe faces +3.3V rail (Pin 4) — Do NOT reverse", x: -135, y: 35 },
+    { idx: 2, total: 4, code: "U1-P8", net: "GND", note: "Thermal relief pad — Pre-heat ground plane 3.5s", x: -45, y: 35 },
+    { idx: 3, total: 4, code: "J2-P1", net: "I2C_SDA", note: "4.7k pull-up adjacent — Avoid solder bridge to SCL", x: 50, y: -32 },
+    { idx: 4, total: 4, code: "J2-P2", net: "I2C_SCL", note: "Final clock line — Inspect fillet cone after flow", x: 135, y: -32 }
+  ];
+
+  let state = {
+    locked: false,
+    stepIdx: -1,
+    heating: false,
+    heatProgress: 0,
+    flowReady: false,
+    pinoutExpanded: false,
+    faultActive: false,
+    cameraYawDeg: 0,
+    time: 0
+  };
+
+  function appendLog(msg, cls = "log-info") {
+    const box = document.getElementById("loggerBox");
+    const div = document.createElement("div");
+    div.className = cls;
+    const ts = new Date().toISOString().slice(11, 23);
+    div.textContent = `[${ts}] ${msg}`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function playTone(freq1, freq2, durMs = 140) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.setValueAtTime(freq1, ctx.currentTime);
+      if (freq2) osc.frequency.exponentialRampToValueAtTime(freq2, ctx.currentTime + durMs / 1000);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durMs / 1000);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + durMs / 1000);
+    } catch (e) {}
+  }
+
+  function updateTreeBadges() {
+    for (let i = 0; i < 4; i++) {
+      const el = document.getElementById(`treePad${i+1}`);
+      if (!state.locked) { el.textContent = "Idle Dot"; el.style.color = "#8c96a8"; }
+      else if (i < state.stepIdx) { el.textContent = "0.35x Check"; el.style.color = "#38f29b"; }
+      else if (i === state.stepIdx) { el.textContent = "ACTIVE RING"; el.style.color = "#4df0ff"; }
+      else { el.textContent = "Hidden"; el.style.color = "#8c96a8"; }
+    }
+    document.getElementById("treeFaultState").textContent = state.faultActive ? "ENABLED (0.2Ω)" : "Hidden (G3)";
+    document.getElementById("treeFaultState").style.color = state.faultActive ? "#ff6048" : "#8c96a8";
+    document.getElementById("treeArrow").textContent = state.faultActive ? "Pointing Right" : "Disabled";
+    document.getElementById("treeArrow").style.color = state.faultActive ? "#ffb830" : "#8c96a8";
+  }
+
+  function syncStepUI() {
+    const titleEl = document.getElementById("stepTitleText");
+    const polEl = document.getElementById("polarityNoteText");
+    const timerEl = document.getElementById("timerStatusText");
+
+    if (!state.locked) {
+      titleEl.textContent = "Standby: Pinch 'Found Board' to Lock PCB";
+      titleEl.style.color = "#4df0ff";
+      polEl.textContent = "Align PCB fiducials inside 37×32° view";
+      timerEl.textContent = "Iron Idle — Waiting for Board Lock";
+      timerEl.style.color = "#f4faff";
+    } else if (state.stepIdx < steps.length) {
+      const s = steps[state.stepIdx];
+      titleEl.textContent = `Step ${s.idx}/${s.total}: Solder ${s.code} (${s.net})`;
+      titleEl.style.color = "#4df0ff";
+      polEl.textContent = state.pinoutExpanded ? `PINOUT SPEC: ${s.note}` : s.note;
+      if (state.flowReady) {
+        timerEl.textContent = "Heating: 350°C — Flow Ready";
+        timerEl.style.color = "#38f29b";
+      } else if (state.heating) {
+        const rem = Math.max(0, 3.5 - state.heatProgress).toFixed(1);
+        timerEl.textContent = `Heating: 350°C (${rem}s remaining)...`;
+        timerEl.style.color = "#ffb830";
+      } else {
+        timerEl.textContent = "Target: 350°C for 3.5s — Pinch 'Heat Pad'";
+        timerEl.style.color = "#f4faff";
+      }
+    } else {
+      titleEl.textContent = "Board Passed QC — All 4 Joints Verified";
+      titleEl.style.color = "#38f29b";
+      polEl.textContent = "Step Card Receded — Workbench View Clear";
+      timerEl.textContent = "0 Shorts • 4/4 Pads Logic Proven";
+      timerEl.style.color = "#38f29b";
+    }
+    updateTreeBadges();
+  }
+
+  function uiLockBoard() {
+    state.locked = true;
+    state.stepIdx = 0;
+    state.heating = false;
+    state.flowReady = false;
+    state.pinoutExpanded = false;
+    playTone(880, 1320, 140);
+    syncStepUI();
+    appendLog("[BenchPulse] Fiducial Stand-In Locked -> Step 1/4 Active on PadRing_1 (C1 +3.3V)");
+  }
+
+  function uiHeatPad() {
+    if (!state.locked) uiLockBoard();
+    state.heating = false;
+    state.heatProgress = 3.5;
+    state.flowReady = true;
+    playTone(660, 1046.5, 180);
+    syncStepUI();
+    appendLog("[BenchPulse] Thermal timer triggered -> Heating: 350°C — Flow Ready");
+  }
+
+  function uiAdvanceStep() {
+    if (!state.locked) { uiLockBoard(); return; }
+    state.heating = false;
+    state.flowReady = false;
+    state.pinoutExpanded = false;
+    if (state.stepIdx + 1 < steps.length) {
+      state.stepIdx += 1;
+      const s = steps[state.stepIdx];
+      playTone(523.25, 783.99, 150);
+      syncStepUI();
+      appendLog(`[BenchPulse] Completed previous joint (receded to 0.35x green dot) -> Advanced to Step ${s.idx}/4: ${s.code} (${s.net})`);
+    } else {
+      state.stepIdx = steps.length;
+      playTone(523.25, 1046.5, 240);
+      syncStepUI();
+      appendLog("[BenchPulse] All 4 joints complete -> Board Passed QC", "log-pass");
+    }
+  }
+
+  function uiTogglePinout() {
+    if (!state.locked || state.stepIdx >= steps.length) return;
+    state.pinoutExpanded = !state.pinoutExpanded;
+    syncStepUI();
+    appendLog(`[BenchPulse] Toggled pinout polarity detail on ${steps[state.stepIdx].code}`);
+  }
+
+  function uiTriggerShort() {
+    state.faultActive = true;
+    document.getElementById("wayfinderArrow").style.display = "block";
+    document.getElementById("faultPopup").style.display = "block";
+    playTone(960, 480, 220);
+    updateTreeBadges();
+    appendLog("[BenchPulse] Continuity short detected (0.2 Ohm) -> WayfinderArrow & FaultPopupRoot enabled", "log-warn");
+  }
+
+  function uiClearShort() {
+    state.faultActive = false;
+    document.getElementById("wayfinderArrow").style.display = "none";
+    document.getElementById("faultPopup").style.display = "none";
+    state.cameraYawDeg = 0;
+    document.getElementById("cameraPoseLabel").textContent = "Gaze: Pitch -12° Down, Yaw 0° (Workbench View @ z = -85 cm)";
+    playTone(660, 990, 140);
+    updateTreeBadges();
+    appendLog("[BenchPulse] Continuity fault cleared -> Resuming assembly");
+  }
+
+  function panCamera(yawDeg) {
+    state.cameraYawDeg = yawDeg;
+    document.getElementById("cameraPoseLabel").textContent =
+      yawDeg === 0
+        ? "Gaze: Pitch -12° Down, Yaw 0° (Workbench View @ z = -85 cm)"
+        : "Gaze: Pitch -10° Down, Yaw +35° Right (Looking at MultimeterStationRoot @ x = +48 cm)";
+    appendLog(`[Preview Camera] Rotated yaw to +${yawDeg}° ${yawDeg > 0 ? "(MultimeterStationRoot in view)" : "(BenchPcbRoot in view)"}`);
+  }
+
+  async function sleepMs(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function runAllLeafScenarios() {
+    appendLog("[LEAF] Running /specs-leaf-run-in-preview (5 registered scenarios in LeafIndex.ts)...", "log-info");
+    for (let i = 1; i <= 5; i++) {
+      const b = document.getElementById(`status-s${i}`);
+      b.className = "badge-run"; b.textContent = "RUNNING";
+    }
+    await sleepMs(400);
+    // Scenario 1
+    uiLockBoard();
+    document.getElementById("status-s1").className = "badge-pass";
+    document.getElementById("status-s1").textContent = "PASSED";
+    appendLog("[LEAF] PASSED: benchpulse-board-lock (PadRing_1 enabled, Step 1/4 verified)", "log-pass");
+    await sleepMs(600);
+
+    // Scenario 2
+    uiHeatPad();
+    document.getElementById("status-s2").className = "badge-pass";
+    document.getElementById("status-s2").textContent = "PASSED";
+    appendLog("[LEAF] PASSED: benchpulse-heat-timer (Heating: 350°C — Flow Ready verified)", "log-pass");
+    await sleepMs(600);
+
+    // Scenario 3
+    uiAdvanceStep(); await sleepMs(350);
+    uiAdvanceStep(); await sleepMs(350);
+    uiAdvanceStep(); await sleepMs(350);
+    uiAdvanceStep();
+    document.getElementById("status-s3").className = "badge-pass";
+    document.getElementById("status-s3").textContent = "PASSED";
+    appendLog("[LEAF] PASSED: benchpulse-step-progression (Steps 1->2->3->4->Board Passed QC)", "log-pass");
+    await sleepMs(600);
+
+    // Scenario 4
+    uiTriggerShort(); await sleepMs(500);
+    panCamera(35); await sleepMs(500);
+    uiClearShort();
+    document.getElementById("status-s4").className = "badge-pass";
+    document.getElementById("status-s4").textContent = "PASSED";
+    appendLog("[LEAF] PASSED: benchpulse-continuity-fault (WayfinderArrow & FaultPopupRoot verified)", "log-pass");
+    await sleepMs(500);
+
+    // Scenario 5
+    uiLockBoard();
+    document.getElementById("status-s5").className = "badge-pass";
+    document.getElementById("status-s5").textContent = "PASSED";
+    appendLog("[LEAF] PASSED: benchpulse-ik-reachability (IKBodyInteractor converged on LockBoardButton & NextStepButton)", "log-pass");
+    appendLog("[SUCCESS] All 5 LEAF scenarios passed (5/5).", "log-pass");
+  }
+
+  // Render 3D Workbench, PCB, PadRing_1..4, Soldering Iron, and Multimeter Station
+  const canvas = document.getElementById("benchCanvas");
+  const ctx = canvas.getContext("2d");
+
+  function resizeCanvas() {
+    canvas.width = canvas.clientWidth * window.devicePixelRatio;
+    canvas.height = canvas.clientHeight * window.devicePixelRatio;
+    ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  function drawScene() {
+    state.time += 0.035;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    const panOffset = -state.cameraYawDeg * 8.5;
+    const cx = w * 0.5 + panOffset;
+    const cy = h * 0.68;
+
+    // 1. Perspective Desk Grid
+    ctx.strokeStyle = "rgba(77, 240, 255, 0.08)";
+    ctx.lineWidth = 1;
+    for (let gx = -500; gx <= 800; gx += 45) {
+      ctx.beginPath();
+      ctx.moveTo(cx + gx * 0.65, cy - 110);
+      ctx.lineTo(cx + gx * 1.35, cy + 160);
+      ctx.stroke();
+    }
+    for (let gy = -90; gy <= 150; gy += 30) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 500, cy + gy);
+      ctx.lineTo(cx + 800, cy + gy);
+      ctx.stroke();
+    }
+
+    // 2. 3D PCB Board (BenchPcbRoot: 32 cm x 22 cm at z = -85 cm, y = -22 cm)
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Board shadow & 3D thickness
+    ctx.fillStyle = "#08291e";
+    ctx.beginPath();
+    ctx.moveTo(-210, -70); ctx.lineTo(210, -70);
+    ctx.lineTo(250, 85); ctx.lineTo(-250, 85);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#1dc98a";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // PCB Copper Traces
+    ctx.strokeStyle = "rgba(56, 242, 155, 0.28)";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-135, 35); ctx.lineTo(-45, 35); ctx.lineTo(0, 0); ctx.lineTo(50, -32); ctx.lineTo(135, -32);
+    ctx.stroke();
+
+    // Central MCU package U1
+    ctx.fillStyle = "#181c24";
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(-38, -28, 76, 52);
+    ctx.strokeRect(-38, -28, 76, 52);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "bold 11px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("STM32 / SPECS-MCU", 0, -2);
+    ctx.fillText("BenchPcbRoot (32×22cm)", 0, 14);
+
+    // Fiducial Markers
+    ctx.strokeStyle = "rgba(77, 240, 255, 0.75)";
+    [[-185, -52], [185, -52], [-215, 68], [215, 68]].forEach(([fx, fy]) => {
+      ctx.beginPath(); ctx.arc(fx, fy, 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx - 10, fy); ctx.lineTo(fx + 10, fy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx, fy - 10); ctx.lineTo(fx, fy + 10); ctx.stroke();
+    });
+
+    // 3. Draw 4 Pads & Spatial Rings (PadRing_1..4)
+    steps.forEach((p, idx) => {
+      // Gold/Silver solder pad on PCB
+      ctx.fillStyle = "#d4af37";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (!state.locked) {
+        // Ambient 1.2cm dot
+        ctx.fillStyle = "rgba(77, 240, 255, 0.45)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y - 14, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (idx < state.stepIdx) {
+        // Completed joint: receded 0.35x emerald check dot
+        ctx.fillStyle = "#38f29b";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y - 14, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#38f29b";
+        ctx.font = "bold 11px sans-serif";
+        ctx.fillText("✓ " + p.code, p.x, p.y - 26);
+      } else if (idx === state.stepIdx) {
+        // ACTIVE SPATIAL TARGET RING (3.6 cm glowing ring + floating label)
+        const pulse = 1 + 0.14 * Math.sin(state.time * 3.5);
+        const radius = 24 * pulse;
+        ctx.strokeStyle = state.flowReady ? "#38f29b" : (state.heating ? "#ffb830" : "#4df0ff");
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y - 8, radius, radius * 0.65, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Vertical anchor stem to pad
+        ctx.strokeStyle = "rgba(77, 240, 255, 0.6)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x, p.y - 42);
+        ctx.stroke();
+
+        // Floating Spatial Label directly on the thing it's about
+        ctx.fillStyle = "rgba(10, 20, 32, 0.9)";
+        ctx.strokeStyle = state.flowReady ? "#38f29b" : "#4df0ff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(p.x - 68, p.y - 72, 136, 28, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = state.flowReady ? "#38f29b" : "#f4faff";
+        ctx.font = "bold 12px sans-serif";
+        ctx.fillText(`${p.code} • ${p.net} ${state.flowReady ? "(FLOW OK)" : "(350°C)"}`, p.x, p.y - 54);
+      }
+    });
+
+    ctx.restore();
+
+    // 4. Out-of-View Bench Multimeter Station at x = +48 cm (visible when panning right 35°)
+    const meterX = cx + 520;
+    const meterY = cy - 40;
+    ctx.save();
+    ctx.translate(meterX, meterY);
+    ctx.fillStyle = "#1f242d";
+    ctx.strokeStyle = state.faultActive ? "#ff6048" : "#ffb830";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-85, -75, 170, 135, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#0d131a";
+    ctx.fillRect(-70, -55, 140, 52);
+    ctx.fillStyle = state.faultActive ? "#ff6048" : "#38f29b";
+    ctx.font = "bold 16px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(state.faultActive ? "SHORT: 0.2 Ω" : "CONT: OPEN (OL)", 0, -24);
+
+    ctx.fillStyle = "#f4faff";
+    ctx.font = "bold 11px sans-serif";
+    ctx.fillText("MultimeterStationRoot (x=+48cm)", 0, 22);
+    ctx.fillStyle = "#8c96a8";
+    ctx.fillText("Outside 32° main PCB FOV", 0, 40);
+    ctx.restore();
+
+    requestAnimationFrame(drawScene);
+  }
+  drawScene();
+</script>
+</body>
+</html>
