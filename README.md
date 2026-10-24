@@ -1,6 +1,10 @@
 # BenchPulse: Hands-Free Spatial PCB Soldering & Circuit Coach for Snap SPECS
 
-> **Built for the [Learn AR with SPECS](https://learn-specs.devpost.com/) Hackathon on Devpost**  
+> **Built for the [Learn AR with SPECS](https://learn-specs.devpost.com/) Hackathon on Devpost**
+> **Live Devpost Submission:** [https://devpost.com/software/benchpulse-specs-ar](https://devpost.com/software/benchpulse-specs-ar)  
+> **Public YouTube Demo Video (2m03s, 1080p):** [https://www.youtube.com/watch?v=bzl7DWU1PAs](https://www.youtube.com/watch?v=bzl7DWU1PAs)  
+> **Public GitHub Repository:** [https://github.com/yixinzhangagent/benchpulse-specs-ar](https://github.com/yixinzhangagent/benchpulse-specs-ar)
+  
 > **Planned with:** Devpost Learn Skill Pack (`npx skills add challengepost/learn-specs --all -y` → `plan-lens` skill)  
 > **Built & Tested with:** Snap CLAD (`ls-clad`), Lens Studio 5.22 MCP, Spectacles Interaction Kit (SIK), Spectacles UI Kit (`SpectaclesUIKit`), and LEAF (`Leaf.lspkg`)
 
